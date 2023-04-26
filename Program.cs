@@ -26,7 +26,6 @@ class Program
         {
             var exeLoc = System.AppContext.BaseDirectory;
             filePaths = Directory.GetFiles(exeLoc,"*.xl*",SearchOption.AllDirectories).ToList().OrderBy(x => x).ToList();
-
         }
         catch(Exception e)
         {
@@ -71,6 +70,7 @@ class Program
                     //When time is up
                 });
                 //Long task to try
+                //Task is within a while loop to ensure workbook is closed before proceeding
                 while (!cts.IsCancellationRequested && e is null)
                 {
                     try
@@ -81,7 +81,6 @@ class Program
                     {
                         e = ex;
                     }
-
                 }
             }
             if (e is not null)
