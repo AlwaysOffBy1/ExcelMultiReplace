@@ -1,31 +1,48 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Microsoft.Office.Interop.Excel;
 
 class Program
 {
     static void Main(string[] args)
     {
-        string? oldVal = "";
-        string? newVal = "";
-        List<string> filePaths;
+        string? oldVal = null;
+        string? newVal = null;
+        List<string>? filePaths = new List<string>();
 
+
+        //While loops to ensure params aren't null
         while (oldVal == "" || oldVal is null)
         {
             Console.WriteLine("What is the value you are searching for?");
             oldVal = Console.ReadLine();
         }
-        while (newVal == "" || newVal is null)
+        while (newVal is null)
         {
             Console.WriteLine("What is the value you are replacing " + oldVal + " with?");
             newVal = Console.ReadLine();
         }
 
+        //Try to access excel files
         try
         {
             filePaths = Directory.GetFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.xl*", SearchOption.AllDirectories).ToList();
-            Console.WriteLine("Found " + filePaths.Count + " excel files");
-            Microsoft.Office.Interop.Excel.Application xlApp = new Microsoft.Office.Interop.Excel.Application();
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine(e.ToString());
+            Console.WriteLine("The program will now exit");
+            Console.ReadLine();
+            System.Environment.Exit(-1);
+        }
+        Console.WriteLine("Found " + filePaths.Count + " excel files");
+        Microsoft.Office.Interop.Excel.Application xlApp = null;
+
+        //Excel files found, try to run loop to replace text from user params
+        try 
+        { 
+            xlApp = new Microsoft.Office.Interop.Excel.Application();
             foreach(string s in filePaths)
             {
                 Console.WriteLine("Opening file " + s);
@@ -44,9 +61,9 @@ class Program
         }
         catch(Exception e)
         {
-            
+            Console.WriteLine(e.ToString());
+            Console.WriteLine("The program will now exit");
+            xlApp = null;
         }
-
-
     }
 }
