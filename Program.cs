@@ -9,7 +9,7 @@ class Program
         List<string>? filePaths = new List<string>();
 
 
-        //While loops to ensure params aren't null
+        //While loops to ensure user entered params aren't null
         while (oldVal == "" || oldVal is null)
         {
             Console.WriteLine("What is the value you are searching for?");
@@ -36,56 +36,62 @@ class Program
             System.Environment.Exit(-1);
         }
         Console.WriteLine("Found " + filePaths.Count + " excel files");
-        Microsoft.Office.Interop.Excel.Application? xlApp = null;
-        Workbook? wb = null;
+
+        //Create xlApp and workbook obj
+        Microsoft.Office.Interop.Excel.Application xlApp = new Microsoft.Office.Interop.Excel.Application();
+        Workbook wb;
 
 
         //Excel files found, try to run loop to replace text from user params
-        //TODO what if file is currently open?
-        try 
-        { 
-            xlApp = new Microsoft.Office.Interop.Excel.Application();
-            foreach(string s in filePaths)
+        foreach(string s in filePaths)
+        {
+            Console.WriteLine("Opening file " + s);
+            wb = TryOpenWorkbook(xlApp, s); 
+            int len = wb.Worksheets.Count;
+            foreach(Worksheet ws in wb.Worksheets)
             {
-                Console.WriteLine("Opening file " + s);
-                while(wb is null) { TryOpenWorkbook(xlApp, s); }
-                int len = wb.Worksheets.Count;
-                foreach(Worksheet ws in wb.Worksheets)
-                {
-                    Console.WriteLine("  Opening sheet " + ws.Name);
-                    Microsoft.Office.Interop.Excel.Range r = ws.UsedRange;
-                    bool success = (bool)r.Replace2(oldVal, newVal, XlLookAt.xlWhole, XlSearchOrder.xlByRows, false, false, false, false, false);
-                }
-                wb.Close(true);
+                Console.WriteLine("  Opening sheet " + ws.Name);
+                Microsoft.Office.Interop.Excel.Range r = ws.UsedRange;
+                bool success = (bool)r.Replace2(oldVal, newVal, XlLookAt.xlWhole, XlSearchOrder.xlByRows, false, false, false, false, false);
             }
+            wb.Close(true);
         }
-        catch(Exception e)
-        {
-            Console.WriteLine(e.ToString());
-            Console.WriteLine("The program will now exit");
-        }
-        finally
-        {
-            if(xlApp is not null) xlApp.Quit();
-            xlApp = null;
-        }
+        if (xlApp is not null) xlApp.Quit();
     }
-    public static Workbook? TryOpenWorkbook(Application xl,string path)
+    public static Workbook TryOpenWorkbook(Application xl,string path)
     {
-        using(CancellationTokenSource cts = new CancellationTokenSource(5000))
+        Exception? e = null;
+        Workbook? workbook = null;
+        while (workbook is null)
         {
-            cts.Token.Register(() => 
+            using (CancellationTokenSource cts = new CancellationTokenSource(5000))
+            {
+                cts.Token.Register(() =>
+                {
+                    //When time is up
+                });
+                //Long task to try
+                while (!cts.IsCancellationRequested && e is null)
+                {
+                    try
+                    {
+                        return xl.Workbooks.Open(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        e = ex;
+                    }
+
+                }
+            }
+            if (e is not null)
             {
                 Console.WriteLine($"Workbook {path} cannot be opened. It may currently be in use. Please close the file then press enter");
+                e = null;
                 Console.ReadLine();
-
-            });
-            while (!cts.IsCancellationRequested)
-            {
-                return xl.Workbooks.Open(path);
             }
         }
-        return null;
+        return workbook;
     }
 }
 
