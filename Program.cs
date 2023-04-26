@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Runtime.CompilerServices;
-using Microsoft.Office.Interop.Excel;
+﻿using Microsoft.Office.Interop.Excel;
 
 class Program
 {
@@ -27,7 +24,9 @@ class Program
         //Try to access excel files
         try
         {
-            filePaths = Directory.GetFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.xl*", SearchOption.AllDirectories).ToList();
+            var exeLoc = System.AppContext.BaseDirectory;
+            filePaths = Directory.GetFiles(exeLoc,"*.xl*",SearchOption.AllDirectories).ToList().OrderBy(x => x).ToList();
+
         }
         catch(Exception e)
         {
@@ -37,16 +36,19 @@ class Program
             System.Environment.Exit(-1);
         }
         Console.WriteLine("Found " + filePaths.Count + " excel files");
-        Microsoft.Office.Interop.Excel.Application xlApp = null;
+        Microsoft.Office.Interop.Excel.Application? xlApp = null;
+        Workbook? wb = null;
+
 
         //Excel files found, try to run loop to replace text from user params
+        //TODO what if file is currently open?
         try 
         { 
             xlApp = new Microsoft.Office.Interop.Excel.Application();
             foreach(string s in filePaths)
             {
                 Console.WriteLine("Opening file " + s);
-                Workbook wb = xlApp.Workbooks.Open(s);
+                while(wb is null) { TryOpenWorkbook(xlApp, s); }
                 int len = wb.Worksheets.Count;
                 foreach(Worksheet ws in wb.Worksheets)
                 {
@@ -56,14 +58,35 @@ class Program
                 }
                 wb.Close(true);
             }
-            xlApp.Quit();
-            xlApp = null;
         }
         catch(Exception e)
         {
             Console.WriteLine(e.ToString());
             Console.WriteLine("The program will now exit");
+        }
+        finally
+        {
+            if(xlApp is not null) xlApp.Quit();
             xlApp = null;
         }
     }
+    public static Workbook? TryOpenWorkbook(Application xl,string path)
+    {
+        using(CancellationTokenSource cts = new CancellationTokenSource(5000))
+        {
+            cts.Token.Register(() => 
+            {
+                Console.WriteLine($"Workbook {path} cannot be opened. It may currently be in use. Please close the file then press enter");
+                Console.ReadLine();
+
+            });
+            while (!cts.IsCancellationRequested)
+            {
+                return xl.Workbooks.Open(path);
+            }
+        }
+        return null;
+    }
 }
+
+
